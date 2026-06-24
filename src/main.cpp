@@ -5,7 +5,6 @@
 #include <iostream>
 #include <limits>
 
-
 void clearInputBuffer() {
   std::cin.clear();
   std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -14,7 +13,9 @@ void clearInputBuffer() {
 void runSimulation(const TrafficProfile &profile, const MetricsCalculator &calc,
                    const QoSEvaluator &eval, const ReportGenerator &rep) {
   CalculatedMetrics metrics = calc.calculate(profile);
-  QoSAssessment qos = eval.evaluate(metrics);
+
+  QoSAssessment qos = eval.evaluate(profile, metrics);
+
   rep.generateConsoleReport(profile, metrics, qos);
 }
 

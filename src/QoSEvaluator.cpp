@@ -1,28 +1,81 @@
 #include "QoSEvaluator.h"
+#include <algorithm> // std::min, std::max, std::clamp
+#include <cmath>     // std::pow
 
-QoSAssessment QoSEvaluator::evaluate(const CalculatedMetrics &metrics) const {
-  // Mock simples: Subtrai as perdas de um teto ideal de 100 pontos
-  double score =
-      100.0 - metrics.packet_loss_percent - (metrics.latency_ms / 10.0);
+std::string QoSEvaluator::classifyQoS(double qos_score) const {
+  if (qos_score >= 85.0)
+    return "Excelente";
+  if (qos_score >= 70.0)
+    return "Boa";
+  if (qos_score >= 50.0)
+    return "Regular";
+  return "Ruim";
+}
 
-  // Trava matemática de segurança (Clamp) entre 0 e 100
-  if (score < 0.0)
-    score = 0.0;
-  if (score > 100.0)
-    score = 100.0;
+QoSAssessment QoSEvaluator::evaluate(const TrafficProfile &profile,
+                                     const CalculatedMetrics &metrics) const {
+  // =========================================================================
+  // 1. CALCULO DE CONFIABILIDADE (Reliability Score)
+  // =========================================================================
+  double jitter_penalty = (metrics.jitter_ms / profile.getBaseLatency()) * 2.5;
+  double raw_reliability = 100.0 - metrics.packet_loss_percent - jitter_penalty;
 
-  std::string label;
-  if (score >= 80.0)
-    label = "Excelente";
-  else if (score >= 60.0)
-    label = "Boa";
-  else if (score >= 40.0)
-    label = "Regular";
-  else
-    label = "Ruim";
+  // std::clamp garante C++17 estrito: trave o valor entre 0.0 e 100.0
+  double reliability = std::clamp(raw_reliability, 0.0, 100.0);
 
-  return QoSAssessment{
-      score,
-      99.999, // Confiabilidade estática de teste (5-nines do 5G)
-      label};
+  // =========================================================================
+  // 2. NORMALIZACAO DOS SUB-INDICES [0.0 a 1.0]
+  // =========================================================================
+  double idx_bw =
+      std::min(1.0, metrics.throughput_mbps / profile.getTargetBandwidth());
+  double idx_lat = std::min(1.0, profile.getBaseLatency() / metrics.latency_ms);
+  double idx_jit =
+      std::max(0.0, 1.0 - (metrics.jitter_ms / profile.getBaseLatency()));
+
+  // Raiz quadrada da taxa de perda para punição logarítmica/severa
+  double loss_rate = metrics.packet_loss_percent / 100.0;
+  double idx_loss = std::max(0.0, 1.0 - std::pow(loss_rate, 0.5));
+
+  // =========================================================================
+  // 3. MATRIZ DE PESOS DO 3GPP
+  // =========================================================================
+  double w_bw = 0.0, w_lat = 0.0, w_jit = 0.0, w_loss = 0.0;
+
+  switch (profile.getType()) {
+  case SliceType::eMBB:
+    w_bw = 0.50;
+    w_lat = 0.20;
+    w_jit = 0.10;
+    w_loss = 0.20;
+    break;
+  case SliceType::URLLC:
+    w_bw = 0.05;
+    w_lat = 0.40;
+    w_jit = 0.15;
+    w_loss = 0.40;
+    break;
+  case SliceType::mMTC:
+    w_bw = 0.10;
+    w_lat = 0.10;
+    w_jit = 0.10;
+    w_loss = 0.70;
+    break;
+  case SliceType::Custom:
+  default:
+    w_bw = 0.25;
+    w_lat = 0.25;
+    w_jit = 0.25;
+    w_loss = 0.25;
+    break;
+  }
+
+  // =========================================================================
+  // 4. PRODUTO VETORIAL FINAL
+  // =========================================================================
+  double raw_qos =
+      (w_bw * idx_bw + w_lat * idx_lat + w_jit * idx_jit + w_loss * idx_loss) *
+      100.0;
+  double qos_score = std::clamp(raw_qos, 0.0, 100.0);
+
+  return QoSAssessment{qos_score, reliability, classifyQoS(qos_score)};
 }
