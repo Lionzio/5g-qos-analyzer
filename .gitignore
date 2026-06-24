@@ -1,0 +1,22 @@
+# Pré-compilados e binários do compilador
+*.o
+*.obj
+*.exe
+*.dll
+*.lib
+*.out
+
+# Diretório de build (caso usemos CMake no futuro)
+build/
+bin/
+
+# Saídas geradas pela simulação (não queremos poluir o repositório com logs de teste)
+outputs/*
+!outputs/.gitkeep
+
+# Arquivos de sistema do Windows e caches de IDE
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.sln
