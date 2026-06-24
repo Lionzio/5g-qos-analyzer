@@ -20,7 +20,6 @@ QoSAssessment QoSEvaluator::evaluate(const TrafficProfile &profile,
   double jitter_penalty = (metrics.jitter_ms / profile.getBaseLatency()) * 2.5;
   double raw_reliability = 100.0 - metrics.packet_loss_percent - jitter_penalty;
 
-  // std::clamp garante C++17 estrito: trave o valor entre 0.0 e 100.0
   double reliability = std::clamp(raw_reliability, 0.0, 100.0);
 
   // =========================================================================
@@ -32,7 +31,6 @@ QoSAssessment QoSEvaluator::evaluate(const TrafficProfile &profile,
   double idx_jit =
       std::max(0.0, 1.0 - (metrics.jitter_ms / profile.getBaseLatency()));
 
-  // Raiz quadrada da taxa de perda para punição logarítmica/severa
   double loss_rate = metrics.packet_loss_percent / 100.0;
   double idx_loss = std::max(0.0, 1.0 - std::pow(loss_rate, 0.5));
 
@@ -70,11 +68,18 @@ QoSAssessment QoSEvaluator::evaluate(const TrafficProfile &profile,
   }
 
   // =========================================================================
-  // 4. PRODUTO VETORIAL FINAL
+  // 4. PRODUTO VETORIAL FINAL E CORTE DE CANAL MORTO
   // =========================================================================
   double raw_qos =
       (w_bw * idx_bw + w_lat * idx_lat + w_jit * idx_jit + w_loss * idx_loss) *
       100.0;
+
+  // REGRA DE COLAPSO FÍSICO: Se a perda de pacotes for quase total (>= 99.9%),
+  // o QoS zera.
+  if (metrics.packet_loss_percent >= 99.9) {
+    raw_qos = 0.0;
+  }
+
   double qos_score = std::clamp(raw_qos, 0.0, 100.0);
 
   return QoSAssessment{qos_score, reliability, classifyQoS(qos_score)};
