@@ -3,7 +3,6 @@
 #include <cmath>
 #include <random>
 
-
 CalculatedMetrics
 MetricsCalculator::calculate(const TrafficProfile &profile) const {
   // 1. Instanciação do gerador pseudoaleatório de alta performance (Mersenne
