@@ -8,7 +8,6 @@
 #include <sstream>
 #include <stdexcept>
 
-
 std::string ReportGenerator::getFormattedTimestamp() const {
   auto now = std::chrono::system_clock::now();
   auto now_time_t = std::chrono::system_clock::to_time_t(now);

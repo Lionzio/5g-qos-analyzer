@@ -5,7 +5,6 @@
 #include <iostream>
 #include <limits>
 
-
 // INJEÇÃO DA API DO WINDOWS PARA CORREÇÃO DE ENCODING
 #ifdef _WIN32
 #include <windows.h>
