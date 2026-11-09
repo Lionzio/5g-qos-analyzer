@@ -1,7 +1,6 @@
 # 📡 5G QoS Analyzer (CLI)
 
 ![C++17](https://img.shields.io/badge/Standard-C++17-blue.svg)
-![Build](https://img.shields.io/badge/Build-Passing-brightgreen.svg)
 ![Platform](https://img.shields.io/badge/Platform-Windows%2011%20%2F%20Linux-lightgrey.svg)
 ![Architecture](https://img.shields.io/badge/Architecture-Pipes%20%26%20Filters-orange.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
